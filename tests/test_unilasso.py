@@ -145,3 +145,18 @@ def test_predict():
     X_test, y_test = simulate_cox_data(n=100, p=10)
     with pytest.raises(AssertionError):
         y_pred = predict(result, X_test)  # X_test has different number of features
+
+def test_coefficients_match_lmdas():
+    # the coefficients in row i are for lmdas[i]: the same as fitting at that lambda alone
+    X, y = simulate_gaussian_data(n=200, p=8)
+    lmdas = np.exp(np.linspace(np.log(0.2), np.log(0.002), 10))
+    for path in [fit_unilasso(X, y, lmdas=lmdas), fit_unilasso(X, y, n_lmdas=10)]:
+        coefs = np.atleast_2d(path.coefs)
+        assert coefs.shape[0] == len(path.lmdas)
+        for i in [0, len(path.lmdas) // 2, len(path.lmdas) - 1]:
+            single = fit_unilasso(X, y, lmdas=path.lmdas[i])
+            np.testing.assert_allclose(coefs[i], np.ravel(single.coefs), atol=1e-4)
+            np.testing.assert_allclose(np.atleast_1d(path.intercept)[i], np.ravel(single.intercept)[0], atol=1e-4)
+        # larger lambdas give sparser fits
+        nonzeros = (coefs != 0).sum(axis=1)
+        assert nonzeros[0] <= nonzeros[-1]
