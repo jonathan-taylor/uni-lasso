@@ -51,6 +51,16 @@ print("UniLasso coefficients:")
 print(extracted_fit.coefs)
 ```
 
+By default the second stage uses leave-one-out univariate fits as features, as in the paper.
+With `loo=False` (in `fit_unilasso` and `cv_unilasso`) it uses the univariate fits themselves.
+UniLasso is then exactly the lasso with penalty factors $1/|\hat\beta_j|$ and the constraints
+$\mathrm{sign}(\beta_j) \in \{0, \mathrm{sign}(\hat\beta_j)\}$, where $\hat\beta_j$ are the
+univariate slopes. This matches `uniLasso(loo = FALSE)` in the R package.
+
+```python
+result = fit_unilasso(X, y, family='gaussian', lmdas=0.01, loo=False)
+```
+
 For a comprehensive examples on package usage, please refer to `examples/` subdirectory.
 
 
