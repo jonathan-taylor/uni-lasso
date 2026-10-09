@@ -13,13 +13,24 @@ UniLasso is a Python package that implements a novel and interpretable approach 
 
 ## Installation
 
-You can install UniLasso by running the following script.
+From PyPI:
+
+```bash
+pip install unilasso
+```
+
+From source:
 
 ```bash
 git clone https://github.com/sophial05/uni-lasso.git
 cd uni-lasso
-pip install -e .
+pip install -e ".[test]"
+pytest
 ```
+
+`unilasso` depends on [adelie](https://github.com/JamesYang007/adelie), which provides wheels
+for Python 3.9 to 3.12. Optional extras: `color` (colored warnings, with `colorama`), `test`
+(`pytest`) and `dev`.
 
 ## Quick Start
 

@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "unilasso"
+dynamic = ["version"]
+description = "UniLasso: univariate-guided sparse regression"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Sophia Lu", email = "sophialu@stanford.edu" }]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "numba",
+    "adelie",
+    "matplotlib",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Mathematics",
+]
+keywords = ["lasso", "sparse regression", "univariate", "uniLasso"]
+
+[project.optional-dependencies]
+color = ["colorama"]
+test = ["pytest"]
+dev = ["pytest", "flake8", "black", "build", "twine"]
+
+[project.urls]
+Homepage = "https://github.com/sophial05/uni-lasso"
+Paper = "https://hdsr.mitpress.mit.edu/pub/3i97j340/release/4"
+
+[tool.setuptools.packages.find]
+include = ["unilasso*"]
+
+[tool.setuptools.dynamic]
+version = { attr = "unilasso.__version__" }
