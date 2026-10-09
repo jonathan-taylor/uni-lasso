@@ -227,26 +227,34 @@ def fit_univariate_regression(
 def fit_univariate_models(
             X: np.ndarray, 
             y: np.ndarray, 
-            family: str = "gaussian"
+            family: str = "gaussian",
+            loo: bool = True
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Fit univariate least squares regression for each feature in X and compute
-    leave-one-out (LOO) fitted values.
+    the features for the second stage: leave-one-out (LOO) fitted values, or the
+    univariate fitted values themselves.
 
     Args:
         X: Feature matrix of shape (n, p).
         y: Response vector of shape (n,).
         family: Family of the response variable ('gaussian', 'binomial', 'cox').
+        loo: If True, the features are the leave-one-out fitted values; if False,
+            the univariate fits beta_intercepts[j] + beta_coefs[j] * X[:, j].
 
     Returns:
         Tuple containing:
-            - loo_fits: Leave-one-out fitted values.
+            - fits: Leave-one-out fitted values (loo=True) or univariate fitted
+              values (loo=False), of shape (n, p).
             - beta_intercepts: Intercepts from univariate regressions.
             - beta_coefs: Slopes from univariate regressions.
     """
     beta_intercepts, beta_coefs = fit_univariate_regression(X, y, family)
-    loo_fits = fit_loo_univariate_models(X, y, family=family)["fit"]
-    return loo_fits, beta_intercepts, beta_coefs
+    if loo:
+        fits = fit_loo_univariate_models(X, y, family=family)["fit"]
+    else:
+        fits = np.asarray(beta_intercepts).reshape(1, -1) + X * np.asarray(beta_coefs).reshape(1, -1)
+    return fits, beta_intercepts, beta_coefs
 
 
 def _format_unilasso_feature_matrix(X: np.ndarray,
@@ -348,7 +356,8 @@ def _prepare_unilasso_input(
                 X: np.ndarray, 
                 y: np.ndarray, 
                 family: str, 
-                lmdas: Optional[Union[float, List[float], np.ndarray]]
+                lmdas: Optional[Union[float, List[float], np.ndarray]],
+                loo: bool = True
 ) -> Tuple[np.ndarray, 
            np.ndarray,
            np.ndarray,
@@ -360,7 +369,7 @@ def _prepare_unilasso_input(
     """Prepare input for UniLasso."""
     X, y, family, lmdas, zero_var_idx = _format_unilasso_input(X, y, family, lmdas)
 
-    loo_fits, beta_intercepts, beta_coefs_fit = fit_univariate_models(X, y, family=family)
+    loo_fits, beta_intercepts, beta_coefs_fit = fit_univariate_models(X, y, family=family, loo=loo)
     loo_fits = np.asfortranarray(loo_fits)
 
     glm_family = _get_glm_family(family, y)
@@ -624,7 +633,8 @@ def cv_unilasso(
             n_folds: int = 5,
             lmda_min_ratio: float = None,
             verbose: bool = False,
-            seed: Optional[int] = None
+            seed: Optional[int] = None,
+            loo: bool = True
 ) ->  UniLassoCVResult:
     """
     Perform cross-validation UniLasso.
@@ -637,6 +647,11 @@ def cv_unilasso(
         lmda_min_ratio: Minimum ratio of the largest to smallest regularization parameter.
         verbose: Whether to print results.
         seed: Random seed for reproducibility.
+        loo: If True (the default), the second stage uses leave-one-out univariate
+            fits as features. If False, it uses the univariate fits themselves,
+            which makes UniLasso the lasso with penalty factors 1 / |beta_j| and
+            the constraints sign(coef_j) in {0, sign(beta_j)}, beta_j the
+            univariate slopes.
 
     Returns:
         Dictionary containing UniLasso results.
@@ -647,7 +662,7 @@ def cv_unilasso(
     assert n_folds > 1, "Number of folds must be greater than 1."
     _check_lmda_min_ratio(lmda_min_ratio)
 
-    X, y, loo_fits, beta_intercepts, beta_coefs_fit, glm_family, constraints, _, zero_var_idx = _prepare_unilasso_input(X, y, family, None)
+    X, y, loo_fits, beta_intercepts, beta_coefs_fit, glm_family, constraints, _, zero_var_idx = _prepare_unilasso_input(X, y, family, None, loo=loo)
     fit_intercept = False if family == "cox" else True
 
     cv_lasso = ad.cv_grpnet(
@@ -715,7 +730,8 @@ def fit_unilasso(
             lmdas: Optional[Union[float, List[float], np.ndarray]] = None,
             n_lmdas: Optional[int] = 100,
             lmda_min_ratio: Optional[float] = 1e-2,
-            verbose: bool = False
+            verbose: bool = False,
+            loo: bool = True
 ) -> UniLassoResult:
     """
     Perform UniLasso with specified regularization parameters.
@@ -728,11 +744,16 @@ def fit_unilasso(
         n_lmdas: Number of regularization parameters to use if `lmdas` is None.
         lmda_min_ratio: Minimum ratio of the largest to smallest regularization parameter. 
         verbose: Whether to print results.
+        loo: If True (the default), the second stage uses leave-one-out univariate
+            fits as features. If False, it uses the univariate fits themselves,
+            which makes UniLasso the lasso with penalty factors 1 / |beta_j| and
+            the constraints sign(coef_j) in {0, sign(beta_j)}, beta_j the
+            univariate slopes.
 
     Returns:
         Dictionary containing UniLasso results.
     """
-    X, y, loo_fits, beta_intercepts, beta_coefs_fit, glm_family, constraints, lmdas, zero_var_idx = _prepare_unilasso_input(X, y, family, lmdas)
+    X, y, loo_fits, beta_intercepts, beta_coefs_fit, glm_family, constraints, lmdas, zero_var_idx = _prepare_unilasso_input(X, y, family, lmdas, loo=loo)
 
     fit_intercept = False if family == "cox" else True
 
