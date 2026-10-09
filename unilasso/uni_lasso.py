@@ -441,17 +441,18 @@ def _format_output(lasso_model: ad.grpnet,
                    zero_var_idx: Optional[np.ndarray],
                    X: np.ndarray,
                    fit_intercept: bool,
-                   reverse_indices: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Format UniLasso output."""
+                   row_indices: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Format UniLasso output. `row_indices` selects and orders the rows (lambda values)
+    of the adelie fit."""
     theta_hat = lasso_model.betas.toarray()
     theta_0 = lasso_model.intercepts
 
     beta_coefs_fit = beta_coefs_fit.squeeze()
     beta_intercepts = beta_intercepts.squeeze()
 
-    if reverse_indices is not None:
-        theta_hat = theta_hat[reverse_indices]
-        theta_0 = theta_0[reverse_indices]
+    if row_indices is not None:
+        theta_hat = theta_hat[row_indices]
+        theta_0 = theta_0[row_indices]
 
 
     gamma_hat_fit = theta_hat * beta_coefs_fit
@@ -765,8 +766,9 @@ def fit_unilasso(
     if len(lmdas) == 0:
         raise ValueError("No regularization strengths remain after removing invalid values")
 
-    reverse_indices = np.arange(len(glm_lmdas))
-    reverse_indices = reverse_indices[::-1]
+    # the rows of the adelie fit for `lmdas`, in the same order: adelie returns its
+    # betas in the order of its own lmdas
+    row_indices = np.array([np.flatnonzero(glm_lmdas == lmda)[0] for lmda in lmdas])
 
 
     gamma_hat, gamma_0, beta_coefs = _format_output(lasso_model,
@@ -775,7 +777,7 @@ def fit_unilasso(
                                                     zero_var_idx,
                                                     X,
                                                     fit_intercept,
-                                                    reverse_indices)
+                                                    row_indices)
 
     if verbose:
         _print_unilasso_results(gamma_hat, lmdas)
